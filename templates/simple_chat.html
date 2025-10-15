@@ -41,6 +41,34 @@
         
         .chat-header h1 {
             font-size: 1.5rem;
+            margin-bottom: 10px;
+        }
+        
+        .prompt-selector {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-top: 10px;
+        }
+        
+        .prompt-selector label {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+        
+        .prompt-selector select {
+            padding: 6px 12px;
+            border: none;
+            border-radius: 6px;
+            background: rgba(255,255,255,0.2);
+            color: white;
+            font-size: 0.9rem;
+            cursor: pointer;
+        }
+        
+        .prompt-selector select option {
+            background: #4a90e2;
+            color: white;
         }
         
         .chat-messages {
@@ -124,13 +152,19 @@
 <body>
     <div class="chat-container">
         <div class="chat-header">
-            <h1>🧮 Math Chatbot</h1>
-            <p>Ask any math question!</p>
+            <h1>🧮 AI Tutor</h1>
+            <p>Choose your tutor and ask questions!</p>
+            <div class="prompt-selector">
+                <label for="promptSelect">Tutor:</label>
+                <select id="promptSelect">
+                    <option value="">Loading...</option>
+                </select>
+            </div>
         </div>
         
         <div class="chat-messages" id="messages">
             <div class="message assistant">
-                Hi! I'm your math tutor. Ask me any math question and I'll help guide you through it!
+                Hi! Choose a tutor above and ask any question. I'll help guide you through it!
             </div>
         </div>
         
@@ -142,6 +176,46 @@
     
     <script>
         let conversationHistory = [];
+        let currentPromptId = 'math_tutor';
+        
+        // Load available prompts on page load
+        async function loadPrompts() {
+            try {
+                const response = await fetch('/api/prompts');
+                const data = await response.json();
+                
+                const select = document.getElementById('promptSelect');
+                select.innerHTML = '';
+                
+                data.prompts.forEach(prompt => {
+                    const option = document.createElement('option');
+                    option.value = prompt.id;
+                    option.textContent = prompt.title;
+                    select.appendChild(option);
+                });
+                
+                // Set default
+                currentPromptId = data.prompts[0]?.id || 'math_tutor';
+                select.value = currentPromptId;
+                
+                // Update when selection changes
+                select.addEventListener('change', function() {
+                    currentPromptId = this.value;
+                    // Clear conversation when switching prompts
+                    conversationHistory = [];
+                    document.getElementById('messages').innerHTML = `
+                        <div class="message assistant">
+                            Hi! I'm your ${this.options[this.selectedIndex].text}. Ask me any question!
+                        </div>
+                    `;
+                });
+            } catch (error) {
+                console.error('Error loading prompts:', error);
+            }
+        }
+        
+        // Load prompts on page load
+        document.addEventListener('DOMContentLoaded', loadPrompts);
         
         // Enable Enter key
         document.getElementById('userInput').addEventListener('keypress', function(e) {
@@ -173,13 +247,14 @@
             scrollToBottom();
             
             try {
-                // Send to backend
+                // Send to backend with selected prompt
                 const response = await fetch('/chat', {
                     method: 'POST',
                     headers: {'Content-Type': 'application/json'},
                     body: JSON.stringify({
                         message: message,
-                        history: conversationHistory
+                        history: conversationHistory,
+                        prompt_id: currentPromptId
                     })
                 });
                 

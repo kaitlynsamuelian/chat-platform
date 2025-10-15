@@ -23,11 +23,48 @@ client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
 DATA_DIR = Path('chat_data')
 DATA_DIR.mkdir(exist_ok=True)
 
+# Prompts directory
+PROMPT_DIR = Path('prompts')
+PROMPT_DIR.mkdir(exist_ok=True)
+
+
+def get_available_prompts():
+    """Load all available prompts from prompts/ directory"""
+    prompts = {}
+    for file in PROMPT_DIR.glob('*.md'):
+        prompt_id = file.stem  # filename without extension
+        prompt_content = file.read_text()
+        # Extract title from first line if it's a markdown header
+        first_line = prompt_content.split('\n')[0]
+        if first_line.startswith('#'):
+            title = first_line.lstrip('#').strip()
+        else:
+            title = prompt_id.replace('_', ' ').title()
+        
+        prompts[prompt_id] = {
+            'id': prompt_id,
+            'title': title,
+            'content': prompt_content
+        }
+    return prompts
+
 
 @app.route('/')
 def index():
     """Main chat page"""
     return render_template('simple_chat.html')
+
+
+@app.route('/api/prompts')
+def list_prompts():
+    """API endpoint to get available prompts"""
+    prompts = get_available_prompts()
+    return jsonify({
+        'prompts': [
+            {'id': p['id'], 'title': p['title']} 
+            for p in prompts.values()
+        ]
+    })
 
 
 @app.route('/chat', methods=['POST'])
@@ -36,15 +73,23 @@ def chat():
     data = request.json
     user_message = data.get('message', '')
     conversation_history = data.get('history', [])
+    prompt_id = data.get('prompt_id', 'math_tutor')  # Default to math_tutor
     
     try:
+        # Load the selected prompt
+        prompts = get_available_prompts()
+        if prompt_id not in prompts:
+            prompt_id = 'math_tutor'  # Fallback
+        
+        system_prompt = prompts[prompt_id]['content'] if prompts else 'You are a helpful AI tutor.'
+        
         # Build messages for OpenAI
         messages = []
         
-        # Add system prompt
+        # Add system prompt from file
         messages.append({
             'role': 'system',
-            'content': 'You are a helpful AI tutor for math problems. Guide students without giving direct answers.'
+            'content': system_prompt
         })
         
         # Add conversation history
@@ -65,8 +110,8 @@ def chat():
         
         ai_response = response.choices[0].message.content
         
-        # Save the chat
-        save_chat(messages, ai_response)
+        # Save the chat with prompt info
+        save_chat(messages, ai_response, prompt_id)
         
         return jsonify({
             'success': True,
@@ -80,13 +125,14 @@ def chat():
         }), 500
 
 
-def save_chat(messages, ai_response):
+def save_chat(messages, ai_response, prompt_id='unknown'):
     """Save chat to JSON file"""
     timestamp = datetime.now().isoformat()
     date_str = datetime.now().strftime('%Y-%m-%d')
     
     chat_data = {
         'timestamp': timestamp,
+        'prompt_used': prompt_id,
         'messages': messages,
         'ai_response': ai_response
     }
