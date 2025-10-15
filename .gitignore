@@ -1,99 +1,44 @@
+# Environment variables
+.env
+
 # Python
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
-build/
-develop-eggs/
-dist/
-downloads/
-eggs/
-.eggs/
-lib/
-lib64/
-parts/
-sdist/
-var/
-wheels/
-*.egg-info/
-.installed.cfg
-*.egg
-
-# Virtual environments
 venv/
 env/
 ENV/
-.venv
-
-# Flask
-instance/
-.webassets-cache
-
-# Environment variables
-.env
-.env.local
-.env.*.local
+*.egg-info/
+dist/
+build/
 
 # IDE
 .vscode/
 .idea/
 *.swp
 *.swo
-*~
 .DS_Store
 
-# Jupyter Notebook
-.ipynb_checkpoints
+# Data
+data/chat_logs/*.json
+data/prompts/*.json
+logs/*.log
+
+# Keep directory structure
+!data/chat_logs/.gitkeep
+!data/prompts/.gitkeep
+!logs/.gitkeep
 
 # Database
 *.db
-*.sqlite3
-
-# Neo4j
-data/neo4j/
-
-# Logs
-*.log
-logs/
-*.log.*
-
-# Chat data (sensitive - don't commit to git)
-data/chat_logs/*.json
-data/backups/
-
-# Temporary files
-tmp/
-temp/
-*.tmp
+*.sqlite
 
 # Testing
 .pytest_cache/
 .coverage
 htmlcov/
-.tox/
 
 # Docker
-*.env.docker
-
-# OS
-Thumbs.db
-desktop.ini
-
-# API keys and secrets (double-check these are never committed)
-*secret*
-*password*
-*token*
-*.key
-*.pem
-
-# Backup files
-*.bak
-*.backup
-
-# Keep directory structure but ignore contents
-data/chat_logs/*
-!data/chat_logs/.gitkeep
-data/prompts/backups/*
-!data/prompts/backups/.gitkeep
-
+docker-compose.override.yml
