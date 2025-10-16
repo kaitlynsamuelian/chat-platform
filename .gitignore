@@ -21,7 +21,8 @@ build/
 *.swo
 .DS_Store
 
-# Data
+# Data - FERPA Protected
+chat_data/
 data/chat_logs/*.json
 data/prompts/*.json
 logs/*.log

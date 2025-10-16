@@ -29,9 +29,10 @@ PROMPT_DIR.mkdir(exist_ok=True)
 
 
 def get_available_prompts():
-    """Load all available prompts from prompts/ directory"""
+    """Load all available prompts from prompts/ directory and subdirectories"""
     prompts = {}
-    for file in PROMPT_DIR.glob('*.md'):
+    # Search recursively for all .md files
+    for file in PROMPT_DIR.rglob('*.md'):
         prompt_id = file.stem  # filename without extension
         prompt_content = file.read_text()
         # Extract title from first line if it's a markdown header
@@ -57,10 +58,31 @@ def index():
 
 @app.route('/api/prompts')
 def list_prompts():
-    """API endpoint to get available prompts"""
+    """API endpoint to get available prompts organized by subject"""
     prompts = get_available_prompts()
+    
+    # Organize by subject
+    by_subject = {
+        'Math': [],
+        'Biology': [],
+        'Physics': [],
+        'General': []
+    }
+    
+    for prompt_id, prompt_data in prompts.items():
+        title = prompt_data['title']
+        if '- Math' in title:
+            by_subject['Math'].append({'id': prompt_id, 'title': title})
+        elif '- Biology' in title:
+            by_subject['Biology'].append({'id': prompt_id, 'title': title})
+        elif '- Physics' in title:
+            by_subject['Physics'].append({'id': prompt_id, 'title': title})
+        else:
+            by_subject['General'].append({'id': prompt_id, 'title': title})
+    
     return jsonify({
-        'prompts': [
+        'by_subject': by_subject,
+        'all_prompts': [
             {'id': p['id'], 'title': p['title']} 
             for p in prompts.values()
         ]

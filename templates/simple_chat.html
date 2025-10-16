@@ -47,13 +47,21 @@
         .prompt-selector {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 15px;
             margin-top: 10px;
+            flex-wrap: wrap;
+        }
+        
+        .selector-group {
+            display: flex;
+            align-items: center;
+            gap: 8px;
         }
         
         .prompt-selector label {
             font-size: 0.9rem;
             opacity: 0.9;
+            font-weight: 500;
         }
         
         .prompt-selector select {
@@ -64,6 +72,12 @@
             color: white;
             font-size: 0.9rem;
             cursor: pointer;
+            min-width: 120px;
+        }
+        
+        .prompt-selector select:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
         }
         
         .prompt-selector select option {
@@ -155,10 +169,18 @@
             <h1>🧮 AI Tutor</h1>
             <p>Choose your tutor and ask questions!</p>
             <div class="prompt-selector">
-                <label for="promptSelect">Tutor:</label>
-                <select id="promptSelect">
-                    <option value="">Loading...</option>
-                </select>
+                <div class="selector-group">
+                    <label for="subjectSelect">Subject:</label>
+                    <select id="subjectSelect">
+                        <option value="">Loading...</option>
+                    </select>
+                </div>
+                <div class="selector-group">
+                    <label for="tutorSelect">Teaching Style:</label>
+                    <select id="tutorSelect" disabled>
+                        <option value="">Select subject first</option>
+                    </select>
+                </div>
             </div>
         </div>
         
@@ -169,14 +191,15 @@
         </div>
         
         <div class="chat-input">
-            <input type="text" id="userInput" placeholder="Type your math question..." />
-            <button onclick="sendMessage()" id="sendBtn">Send</button>
+            <input type="text" id="userInput" placeholder="Select a tutor to start..." disabled />
+            <button onclick="sendMessage()" id="sendBtn" disabled>Send</button>
         </div>
     </div>
     
     <script>
         let conversationHistory = [];
-        let currentPromptId = 'math_tutor';
+        let currentPromptId = null;
+        let promptsBySubject = {};
         
         // Load available prompts on page load
         async function loadPrompts() {
@@ -184,31 +207,70 @@
                 const response = await fetch('/api/prompts');
                 const data = await response.json();
                 
-                const select = document.getElementById('promptSelect');
-                select.innerHTML = '';
+                promptsBySubject = data.by_subject;
                 
-                data.prompts.forEach(prompt => {
-                    const option = document.createElement('option');
-                    option.value = prompt.id;
-                    option.textContent = prompt.title;
-                    select.appendChild(option);
+                // Populate subject dropdown
+                const subjectSelect = document.getElementById('subjectSelect');
+                subjectSelect.innerHTML = '<option value="">Select a subject...</option>';
+                
+                Object.keys(promptsBySubject).forEach(subject => {
+                    if (promptsBySubject[subject].length > 0) {
+                        const option = document.createElement('option');
+                        option.value = subject;
+                        option.textContent = subject;
+                        subjectSelect.appendChild(option);
+                    }
                 });
                 
-                // Set default
-                currentPromptId = data.prompts[0]?.id || 'math_tutor';
-                select.value = currentPromptId;
+                // Handle subject change
+                subjectSelect.addEventListener('change', function() {
+                    const tutorSelect = document.getElementById('tutorSelect');
+                    const subject = this.value;
+                    
+                    if (!subject) {
+                        tutorSelect.disabled = true;
+                        tutorSelect.innerHTML = '<option value="">Select subject first</option>';
+                        return;
+                    }
+                    
+                    // Populate tutor dropdown based on selected subject
+                    tutorSelect.disabled = false;
+                    tutorSelect.innerHTML = '<option value="">Choose teaching style...</option>';
+                    
+                    promptsBySubject[subject].forEach(prompt => {
+                        const option = document.createElement('option');
+                        option.value = prompt.id;
+                        // Remove subject from title for cleaner display
+                        const cleanTitle = prompt.title.replace(` - ${subject}`, '').replace(' - Any Subject', '');
+                        option.textContent = cleanTitle;
+                        tutorSelect.appendChild(option);
+                    });
+                });
                 
-                // Update when selection changes
-                select.addEventListener('change', function() {
+                // Handle tutor selection
+                const tutorSelect = document.getElementById('tutorSelect');
+                tutorSelect.addEventListener('change', function() {
+                    if (!this.value) return;
+                    
                     currentPromptId = this.value;
-                    // Clear conversation when switching prompts
+                    const subjectSelect = document.getElementById('subjectSelect');
+                    const subject = subjectSelect.value;
+                    const tutorName = this.options[this.selectedIndex].text;
+                    
+                    // Clear conversation when switching tutors
                     conversationHistory = [];
                     document.getElementById('messages').innerHTML = `
                         <div class="message assistant">
-                            Hi! I'm your ${this.options[this.selectedIndex].text}. Ask me any question!
+                            Hi! I'm your ${tutorName} for ${subject}. Ask me any question!
                         </div>
                     `;
+                    
+                    // Enable input
+                    document.getElementById('userInput').disabled = false;
+                    document.getElementById('sendBtn').disabled = false;
+                    document.getElementById('userInput').focus();
                 });
+                
             } catch (error) {
                 console.error('Error loading prompts:', error);
             }
