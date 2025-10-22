@@ -177,7 +177,7 @@ def save_chat(messages, ai_response, prompt_id='unknown'):
 
 
 if __name__ == '__main__':
-    print("🚀 Starting simple chatbot on http://localhost:5000")
+    print("🚀 Starting simple chatbot on http://localhost:8000")
     print("   Make sure you have OPENAI_API_KEY in .env file")
-    app.run(debug=True, port=5000)
+    app.run(debug=True, port=8000)
 
